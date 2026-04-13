@@ -29,7 +29,20 @@ sleep 2
 # ==========================================
 echo ">>> 1/5: Update sistem dan install paket dasar (Nginx, Git, Certbot)..."
 apt update && apt upgrade -y
+
+# Mencegah Nginx otomatis menyala (crash) saat instalasi pada VPS yang tidak mendukung IPv6
+printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
+chmod +x /usr/sbin/policy-rc.d
+
+# Install paket-paket
 apt install -y curl wget git nano ufw nginx certbot python3-certbot-nginx
+
+# Hapus pencegahan
+rm -f /usr/sbin/policy-rc.d
+
+# Menghapus default Nginx config yang berisi bind [::]:80 (IPv6)
+rm -f /etc/nginx/sites-enabled/default
+rm -f /etc/nginx/sites-available/default
 
 # ==========================================
 # 3. Install Docker & Docker Compose
