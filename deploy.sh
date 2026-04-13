@@ -22,33 +22,41 @@ echo "Memulai instalasi sistem untuk domain: $DOMAIN_NAME"
 sleep 2
 
 # ==========================================
-# 2. Aktifkan IPv6 di Kernel (Kunci Utama!)
+# 2. Perbaiki State APT yang Nyangkut (jika ada)
 # ==========================================
-# VPS baru sering menonaktifkan IPv6. Nginx default Ubuntu
-# membutuhkan IPv6 saat pertama kali start. Kita aktifkan sementara
-# agar proses instalasi berjalan mulus.
-echo ">>> 0/5: Memastikan dukungan IPv6 kernel aktif..."
-echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
-echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-
-# ==========================================
-# 3. Perbaiki State APT yang Nyangkut (jika ada)
-# ==========================================
-# Jika sebelumnya ada proses apt yang gagal di tengah jalan,
-# kita perbaiki dulu sebelum melakukan apapun.
-echo ">>> Membersihkan state APT yang mungkin rusak..."
+echo ">>> Membersihkan state APT dan instalasi Nginx yang rusak..."
 dpkg --configure -a 2>/dev/null || true
 apt --fix-broken install -y 2>/dev/null || true
 
-# ==========================================
-# 4. Update Sistem & Install Nginx, Certbot
-# ==========================================
-echo ">>> 1/5: Update sistem dan install paket dasar (Nginx, Git, Certbot)..."
-apt update && apt upgrade -y
-apt install -y curl wget git nano ufw nginx certbot python3-certbot-nginx
+# Hapus total Nginx agar bisa install dari kondisi bersih
+apt purge -y nginx nginx-common nginx-full nginx-core 2>/dev/null || true
+apt autoremove -y 2>/dev/null || true
 
-# Hapus konfigurasi default Nginx (yang berisi IPv6)
+# ==========================================
+# 3. Update Sistem & Install Paket Dasar
+# ==========================================
+echo ">>> 1/5: Update sistem dan install paket dasar..."
+apt update && apt upgrade -y
+apt install -y curl wget git nano ufw certbot
+
+# ==========================================
+# 4. Install Nginx dengan Patch IPv6 Otomatis
+# ==========================================
+echo ">>> 1.5/5: Install Nginx dan patch konfigurasi IPv6..."
+
+# Langkah 1: Install Nginx - biarkan gagal di post-install (IPv6), file sudah terekstrak
+apt install -y nginx 2>/dev/null || true
+
+# Langkah 2: Patch SEMUA file konfigurasi Nginx yang baru saja diekstrak
+#            Ganti semua listen [::] dengan versi komentar (# listen [::])
+find /etc/nginx -type f \( -name "*.conf" -o -name "default" \) \
+    -exec sed -i 's/listen \[::\]/#listen \[::\]/g' {} \;
+
+# Langkah 3: Paksa DPkG selesaikan konfigurasi Nginx (sekarang config sudah aman IPv4)
+dpkg --configure nginx 2>/dev/null || true
+apt install -y python3-certbot-nginx
+
+# Hapus default site bawaan
 rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/sites-available/default
 
