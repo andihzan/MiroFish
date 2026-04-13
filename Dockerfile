@@ -16,8 +16,11 @@ COPY frontend/package.json frontend/package-lock.json ./frontend/
 COPY backend/pyproject.toml backend/uv.lock ./backend/
 
 # 安装依赖（Node + Python）
+# Pasang torch CPU-only DULU sebelum uv sync untuk mencegah
+# CUDA version (8+ GB) ter-download secara otomatis oleh camel-ai
 RUN npm ci \
   && npm ci --prefix frontend \
+  && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
   && cd backend && uv sync --frozen
 
 # 复制项目源码
