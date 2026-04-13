@@ -30,15 +30,21 @@ sleep 2
 echo ">>> 1/5: Update sistem dan install paket dasar (Nginx, Git, Certbot)..."
 apt update && apt upgrade -y
 
-# Memasukkan file dummy ke Nginx agar instalasi tidak berusaha mengikat port IPv6
-mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-echo "server { listen 80; }" > /etc/nginx/sites-available/default
-ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+# Install basic tools
+apt install -y curl wget git nano ufw certbot
 
-# Install paket-paket
-apt install -y curl wget git nano ufw nginx certbot python3-certbot-nginx
+# Install Nginx and certbot-nginx. Jika gagal karena IPv6, biarkan dulu (|| true)
+apt install -y nginx python3-certbot-nginx || true
 
-# Menghapus default Nginx config setelah aman
+# Langsung perbaiki default konfigurasi yang baru saja di-unpack oleh DPkG
+if [ -f "/etc/nginx/sites-available/default" ]; then
+    sed -i 's/listen \[::\]/# listen \[::\]/g' /etc/nginx/sites-available/default
+fi
+
+# Paksa perbaiki instalasi yang tertunda/nyangkut (dengan konfigurasi yang sudah di-patch)
+apt --fix-broken install -y
+
+# Menghapus default Nginx config agar kita bisa membuat yang baru
 rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/sites-available/default
 
