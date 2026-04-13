@@ -33,18 +33,27 @@ apt update && apt upgrade -y
 # Install basic tools
 apt install -y curl wget git nano ufw certbot
 
-# Install Nginx and certbot-nginx. Jika gagal karena IPv6, biarkan dulu (|| true)
+# Buat konfigurasi dummy yang aman (IPv4 ONLY) untuk mencegat instalasi Nginx
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+cat > /etc/nginx/sites-available/default <<EOF
+server {
+    listen 80 default_server;
+    server_name _;
+    root /var/www/html;
+}
+EOF
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Remove IPv6 from global config if it exists
+sed -i 's/listen \[::\]/# listen \[::\]/g' /etc/nginx/nginx.conf 2>/dev/null || true
+
+# Install Nginx and certbot-nginx. (Pasti akan sukses sekarang)
 apt install -y nginx python3-certbot-nginx || true
 
-# Langsung perbaiki default konfigurasi yang baru saja di-unpack oleh DPkG
-if [ -f "/etc/nginx/sites-available/default" ]; then
-    sed -i 's/listen \[::\]/# listen \[::\]/g' /etc/nginx/sites-available/default
-fi
-
-# Paksa perbaiki instalasi yang tertunda/nyangkut (dengan konfigurasi yang sudah di-patch)
+# Jika tadi masih sempat nyangkut (kondisi awal user), perbaiki paksa:
 apt --fix-broken install -y
 
-# Menghapus default Nginx config agar kita bisa membuat yang baru
+# Muluskan direktori Nginx untuk domain baru kita
 rm -f /etc/nginx/sites-enabled/default
 rm -f /etc/nginx/sites-available/default
 
