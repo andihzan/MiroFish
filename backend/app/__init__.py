@@ -61,12 +61,38 @@ def create_app(config_class=Config):
         logger = get_logger('mirofish.request')
         logger.debug(f"响应: {response.status_code}")
         return response
+
+    import jwt
+    from flask import jsonify
+
+    @app.before_request
+    def check_auth():
+        if request.method == 'OPTIONS':
+            return
+        
+        # Public paths that don't need auth
+        public_paths = ['/health', '/api/auth/login']
+        if request.path in public_paths or not request.path.startswith('/api/'):
+            return
+            
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({'success': False, 'error': 'Missing or invalid token'}), 401
+            
+        token = auth_header.split(' ')[1]
+        try:
+            jwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            return jsonify({'success': False, 'error': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'success': False, 'error': 'Invalid token'}), 401
     
     # 注册蓝图
-    from .api import graph_bp, simulation_bp, report_bp
+    from .api import graph_bp, simulation_bp, report_bp, auth_bp
     app.register_blueprint(graph_bp, url_prefix='/api/graph')
     app.register_blueprint(simulation_bp, url_prefix='/api/simulation')
     app.register_blueprint(report_bp, url_prefix='/api/report')
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     
     # 健康检查
     @app.route('/health')

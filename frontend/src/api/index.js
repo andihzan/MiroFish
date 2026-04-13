@@ -14,6 +14,10 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     config.headers['Accept-Language'] = i18n.global.locale.value
+    const token = localStorage.getItem('mirofish_auth_token')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
     return config
   },
   error => {
@@ -37,6 +41,12 @@ service.interceptors.response.use(
   },
   error => {
     console.error('Response error:', error)
+
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('mirofish_auth_token')
+      window.location.href = '/login'
+      return Promise.reject(new Error('Unauthorized or session expired'))
+    }
     
     // 处理超时
     if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {

@@ -20,6 +20,10 @@ else:
 class Config:
     """Flask配置类"""
     
+    # 鉴权安全配置
+    APP_PASSWORD = os.environ.get('APP_PASSWORD', 'admin123')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'default-jwt-secret-key-1234')
+
     # Flask配置
     SECRET_KEY = os.environ.get('SECRET_KEY', 'mirofish-secret-key')
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'

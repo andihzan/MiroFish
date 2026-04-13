@@ -22,6 +22,7 @@
 
       <div class="header-right">
         <LanguageSwitcher />
+        <LogoutButton />
         <div class="step-divider"></div>
         <div class="workflow-step">
           <span class="step-num">Step {{ currentStep }}/5</span>
@@ -86,6 +87,7 @@ import Step2EnvSetup from '../components/Step2EnvSetup.vue'
 import { generateOntology, getProject, buildGraph, getTaskStatus, getGraphData } from '../api/graph'
 import { getPendingUpload, clearPendingUpload } from '../store/pendingUpload'
 import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+import LogoutButton from '../components/LogoutButton.vue'
 
 const route = useRoute()
 const router = useRouter()
